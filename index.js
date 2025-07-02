@@ -1,11 +1,15 @@
 const http = require("http");
 const net = require("net");
-const url = require("url");
 
 const PORT = process.env.PORT || 8080;
 
-const server = http.createServer();
+// Basic handler to make Railway healthcheck happy
+const server = http.createServer((req, res) => {
+    res.writeHead(200, { "Content-Type": "text/plain" });
+    res.end("Tunnel proxy is running.\n");
+});
 
+// Handle HTTPS CONNECT requests (main tunneling logic)
 server.on("connect", (req, clientSocket, head) => {
     const { port, hostname } = new URL(`http://${req.url}`);
     const serverSocket = net.connect(port, hostname, () => {
