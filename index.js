@@ -1,15 +1,24 @@
-const express = require('express');
-const { createProxyMiddleware } = require('http-proxy-middleware');
-const app = express();
+const http = require('http');
+const net = require('net');
+const url = require('url');
 
-app.use('/', createProxyMiddleware({
-    target: 'https://api.cyberghostvpn.com',
-    changeOrigin: true,
-    secure: true,
-    pathRewrite: { '^/': '/' }
-}));
+const server = http.createServer();
 
-const port = process.env.PORT || 8080;
-app.listen(port, () => {
-    console.log(`🚀 Proxy is running on port ${port}`);
+server.on('connect', (req, clientSocket, head) => {
+    const { port, hostname } = new URL(`http://${req.url}`);
+    const serverSocket = net.connect(port || 443, hostname, () => {
+        clientSocket.write('HTTP/1.1 200 Connection Established\r\n\r\n');
+        serverSocket.write(head);
+        serverSocket.pipe(clientSocket);
+        clientSocket.pipe(serverSocket);
+    });
+
+    serverSocket.on('error', () => {
+        clientSocket.write('HTTP/1.1 502 Bad Gateway\r\n\r\n');
+        clientSocket.destroy();
+    });
+});
+
+server.listen(process.env.PORT || 10000, () => {
+    console.log(`🔐 HTTPS tunnel proxy running`);
 });
