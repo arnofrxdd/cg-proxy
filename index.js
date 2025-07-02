@@ -1,24 +1,25 @@
-const http = require('http');
-const net = require('net');
-const url = require('url');
+const http = require("http");
+const net = require("net");
+const url = require("url");
+
+const PORT = process.env.PORT || 8080;
 
 const server = http.createServer();
 
-server.on('connect', (req, clientSocket, head) => {
+server.on("connect", (req, clientSocket, head) => {
     const { port, hostname } = new URL(`http://${req.url}`);
-    const serverSocket = net.connect(port || 443, hostname, () => {
-        clientSocket.write('HTTP/1.1 200 Connection Established\r\n\r\n');
+    const serverSocket = net.connect(port, hostname, () => {
+        clientSocket.write("HTTP/1.1 200 Connection Established\r\n\r\n");
         serverSocket.write(head);
         serverSocket.pipe(clientSocket);
         clientSocket.pipe(serverSocket);
     });
 
-    serverSocket.on('error', () => {
-        clientSocket.write('HTTP/1.1 502 Bad Gateway\r\n\r\n');
-        clientSocket.destroy();
+    serverSocket.on("error", (err) => {
+        clientSocket.end(`HTTP/1.1 500 ${err.message}\r\n`);
     });
 });
 
-server.listen(process.env.PORT || 10000, () => {
-    console.log(`🔐 HTTPS tunnel proxy running`);
+server.listen(PORT, () => {
+    console.log(`Proxy server running on port ${PORT}`);
 });
